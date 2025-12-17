@@ -70,7 +70,9 @@
             justify-content: center;
             color: white;
             font-size: 2rem;
+            transition: transform 0.1s;
         }
+        /* 기본 상태에서는 애니메이션 없음 */
         .audio-wave::before, .audio-wave::after {
             content: '';
             position: absolute;
@@ -79,9 +81,17 @@
             background: inherit;
             border-radius: 50%;
             z-index: -1;
+            opacity: 0; /* 기본적으로 숨김 */
+        }
+        
+        /* speaking 클래스가 붙었을 때만 애니메이션 작동 */
+        .audio-wave.speaking {
+            transform: scale(1.1);
+        }
+        .audio-wave.speaking::before, .audio-wave.speaking::after {
             animation: pulse-ring 2s infinite;
         }
-        .audio-wave::after { animation-delay: 1s; }
+        .audio-wave.speaking::after { animation-delay: 1s; }
 
         .otp-input {
             width: 3rem;
@@ -147,11 +157,11 @@
             const [showSettings, setShowSettings] = useState(false);
             const [geminiKey, setGeminiKey] = useState('');
             const [connectionTime, setConnectionTime] = useState(0); 
+            const [isAudioActive, setIsAudioActive] = useState(false); // [추가] 오디오 활동 감지 상태
             
             // Refs
             const localVideoRef = useRef(null);
             const remoteVideoRef = useRef(null);
-            // [추가] 오디오 전용 재생을 위한 Ref
             const remoteAudioRef = useRef(null);
             
             const peerRef = useRef(null);
@@ -186,6 +196,66 @@
                 }
                 return () => clearInterval(timerRef.current);
             }, [mode, remoteStream]);
+
+            // --- Audio Level Monitoring (New) ---
+            useEffect(() => {
+                if (!localStream && !remoteStream) return;
+
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+
+                const audioContext = new AudioContext();
+                const analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                const sources = [];
+
+                try {
+                    if (localStream && localStream.getAudioTracks().length > 0) {
+                        const source = audioContext.createMediaStreamSource(localStream);
+                        source.connect(analyser);
+                        sources.push(source);
+                    }
+                    if (remoteStream && remoteStream.getAudioTracks().length > 0) {
+                        const source = audioContext.createMediaStreamSource(remoteStream);
+                        source.connect(analyser);
+                        sources.push(source);
+                    }
+                } catch (e) {
+                    console.error("Audio Context Error:", e);
+                }
+
+                let animationId;
+                const checkVolume = () => {
+                    analyser.getByteFrequencyData(dataArray);
+                    let sum = 0;
+                    for (let i = 0; i < dataArray.length; i++) {
+                        sum += dataArray[i];
+                    }
+                    const average = sum / dataArray.length;
+                    
+                    // Threshold check (소리가 일정 수준 이상일 때만 활성화)
+                    const isSpeaking = average > 10; 
+                    setIsAudioActive(prev => {
+                        if (prev !== isSpeaking) return isSpeaking;
+                        return prev;
+                    });
+                    
+                    animationId = requestAnimationFrame(checkVolume);
+                };
+                
+                if (sources.length > 0) {
+                    checkVolume();
+                }
+
+                return () => {
+                    cancelAnimationFrame(animationId);
+                    sources.forEach(s => s.disconnect());
+                    analyser.disconnect();
+                    if (audioContext.state !== 'closed') audioContext.close();
+                };
+            }, [localStream, remoteStream]);
 
             // --- Media Handling ---
             const getMediaStream = async () => {
@@ -312,7 +382,6 @@
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) return;
                 
-                // STT가 이미 실행 중이면 다시 시작하지 않음
                 if (recognitionRef.current) return;
 
                 const recognition = new SpeechRecognition();
@@ -326,12 +395,8 @@
                         if (event.results[i].isFinal) {
                             final += event.results[i][0].transcript;
                             if (final.trim()) {
-                                // 1. 상대방에게 전송
-                                if (connRef.current?.open) {
-                                    connRef.current.send({ type: 'subtitle', text: final });
-                                }
+                                if (connRef.current?.open) connRef.current.send({ type: 'subtitle', text: final });
                                 
-                                // 2. 내 화면에 표시
                                 const target = myLang === 'ko' ? 'en' : 'ko';
                                 const myTrans = await translateWithGemini(final, target);
                                 setSubtitles(prev => [...prev, { id: Date.now(), text: final, translated: myTrans, isLocal: true }]);
@@ -339,7 +404,6 @@
                         }
                     }
                 };
-                
                 try { recognition.start(); recognitionRef.current = recognition; } catch (e) {}
             };
 
@@ -390,7 +454,6 @@
                 if (localStream && localVideoRef.current) localVideoRef.current.srcObject = localStream;
                 if (remoteStream && remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
                 
-                // [추가] 오디오 전용 스트림 연결 (화면이 없어도 소리는 나야 함)
                 if (remoteStream && remoteAudioRef.current) {
                     remoteAudioRef.current.srcObject = remoteStream;
                     remoteAudioRef.current.play().catch(e => console.error("Audio Play Error:", e));
@@ -398,7 +461,6 @@
             }, [localStream, remoteStream, mode]);
 
             // --- Render ---
-            // ... (Home, Host, Join screens remain the same) ...
             if (mode === 'home') return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-card max-w-md w-full rounded-3xl p-8 text-slate-800 text-center animate-slide-up relative">
@@ -468,7 +530,7 @@
                     
                     {/* 1. Main Content Area */}
                     <div className="flex-1 relative flex items-center justify-center bg-black/90">
-                        {/* [추가] 오디오 전용 재생기 (항상 렌더링되지만 숨김 처리) */}
+                        {/* [추가] 오디오 전용 재생기 */}
                         {!isVideoMode && remoteStream && (
                             <audio ref={remoteAudioRef} autoPlay playsInline controls={false} style={{ display: 'none' }} />
                         )}
@@ -479,10 +541,13 @@
                         ) : (
                             // [Audio/Text Mode] Chat UI (Full Center)
                             <div className="w-full h-full max-w-3xl flex flex-col p-6 animate-fade-in">
-                                {/* Header Info */}
+                                {/* Header Info with Wave */}
                                 <div className="flex items-center justify-center gap-2 mb-6 opacity-70">
                                     {mediaType === 'audio' || remoteMediaType === 'audio' ? (
-                                        <div className="audio-wave"><i className="fas fa-microphone"></i></div>
+                                        // [수정] 오디오 감지시 클래스 추가
+                                        <div className={`audio-wave ${isAudioActive ? 'speaking' : ''}`}>
+                                            <i className="fas fa-microphone"></i>
+                                        </div>
                                     ) : (
                                         <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center text-3xl"><i className="fas fa-comment-dots"></i></div>
                                     )}
@@ -507,7 +572,6 @@
                                                 : 'bg-slate-700 text-white rounded-bl-none'
                                             }`}>
                                                 {sub.isLocal ? (
-                                                    // 내 말: 원문 위, 번역 아래 (작게)
                                                     <>
                                                         <div className="font-medium mb-1">{sub.text}</div>
                                                         <div className="text-blue-200 text-xs border-t border-blue-500 pt-1 flex items-center gap-1">
@@ -515,7 +579,6 @@
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    // 상대 말: 번역 위 (크게), 원문 아래 (작게)
                                                     <>
                                                         <div className="text-lg font-bold text-yellow-300 mb-1">{sub.translated}</div>
                                                         <div className="text-slate-400 text-xs border-t border-slate-600 pt-1">
@@ -546,7 +609,7 @@
 
                     {/* 2. Local PIP (Only in Video Mode) */}
                     {isVideoMode && (
-                        <div className="absolute top-6 right-6 w-48 aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-20">
+                        <div className="absolute top-6 right-6 w-48 aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-20 group">
                             {localStream ? <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-xs text-slate-400">카메라 끔</div>}
                         </div>
                     )}
