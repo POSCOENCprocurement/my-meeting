@@ -151,6 +151,9 @@
             // Refs
             const localVideoRef = useRef(null);
             const remoteVideoRef = useRef(null);
+            // [추가] 오디오 전용 재생을 위한 Ref
+            const remoteAudioRef = useRef(null);
+            
             const peerRef = useRef(null);
             const connRef = useRef(null);
             const callRef = useRef(null);
@@ -307,7 +310,10 @@
             // --- STT & AI ---
             const setupSpeechRecognition = () => {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition || recognitionRef.current) return;
+                if (!SpeechRecognition) return;
+                
+                // STT가 이미 실행 중이면 다시 시작하지 않음
+                if (recognitionRef.current) return;
 
                 const recognition = new SpeechRecognition();
                 recognition.continuous = true;
@@ -320,8 +326,12 @@
                         if (event.results[i].isFinal) {
                             final += event.results[i][0].transcript;
                             if (final.trim()) {
-                                if (connRef.current?.open) connRef.current.send({ type: 'subtitle', text: final });
+                                // 1. 상대방에게 전송
+                                if (connRef.current?.open) {
+                                    connRef.current.send({ type: 'subtitle', text: final });
+                                }
                                 
+                                // 2. 내 화면에 표시
                                 const target = myLang === 'ko' ? 'en' : 'ko';
                                 const myTrans = await translateWithGemini(final, target);
                                 setSubtitles(prev => [...prev, { id: Date.now(), text: final, translated: myTrans, isLocal: true }]);
@@ -329,6 +339,7 @@
                         }
                     }
                 };
+                
                 try { recognition.start(); recognitionRef.current = recognition; } catch (e) {}
             };
 
@@ -374,12 +385,20 @@
                 setShowSettings(false);
             };
 
+            // Video & Audio Effect
             useEffect(() => {
                 if (localStream && localVideoRef.current) localVideoRef.current.srcObject = localStream;
                 if (remoteStream && remoteVideoRef.current) remoteVideoRef.current.srcObject = remoteStream;
+                
+                // [추가] 오디오 전용 스트림 연결 (화면이 없어도 소리는 나야 함)
+                if (remoteStream && remoteAudioRef.current) {
+                    remoteAudioRef.current.srcObject = remoteStream;
+                    remoteAudioRef.current.play().catch(e => console.error("Audio Play Error:", e));
+                }
             }, [localStream, remoteStream, mode]);
 
             // --- Render ---
+            // ... (Home, Host, Join screens remain the same) ...
             if (mode === 'home') return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-card max-w-md w-full rounded-3xl p-8 text-slate-800 text-center animate-slide-up relative">
@@ -449,6 +468,11 @@
                     
                     {/* 1. Main Content Area */}
                     <div className="flex-1 relative flex items-center justify-center bg-black/90">
+                        {/* [추가] 오디오 전용 재생기 (항상 렌더링되지만 숨김 처리) */}
+                        {!isVideoMode && remoteStream && (
+                            <audio ref={remoteAudioRef} autoPlay playsInline controls={false} style={{ display: 'none' }} />
+                        )}
+
                         {isVideoMode ? (
                             // [Video Mode] Full Screen Video
                             <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
