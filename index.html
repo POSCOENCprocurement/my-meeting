@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalMeet AI - Dual Subtitles</title>
+    <title>GlobalMeet AI - Smart Mode</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FontAwesome & Google Fonts (Inter) -->
+    <!-- FontAwesome & Google Fonts -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
@@ -36,21 +36,53 @@
                 radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
         }
         
-        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
-        .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.5);
             box-shadow: 0 20px 40px rgba(0,0,0,0.1);
         }
-        .glass-bar {
+        .glass-panel {
             background: rgba(15, 23, 42, 0.6);
-            backdrop-filter: blur(16px);
+            backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
-        /* OTP Input Style */
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        
+        .animate-fade-in { animation: fadeIn 0.6s ease-out; }
+        .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .audio-wave {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        .audio-wave::before, .audio-wave::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            border-radius: 50%;
+            z-index: -1;
+            animation: pulse-ring 2s infinite;
+        }
+        .audio-wave::after { animation-delay: 1s; }
+
         .otp-input {
             width: 3rem;
             height: 3.5rem;
@@ -70,8 +102,10 @@
             transform: translateY(-2px);
         }
         
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Scrollbar */
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
     </style>
 </head>
 <body class="text-white h-screen overflow-hidden">
@@ -81,6 +115,8 @@
     <script type="text/babel" data-type="module">
         import React, { useState, useEffect, useRef, useCallback } from 'react';
         import ReactDOM from 'react-dom/client';
+
+        const APP_PREFIX = "GM-V3-";
 
         // --- Mock Translation ---
         const mockTranslate = async (text, targetLang) => {
@@ -94,24 +130,23 @@
             });
         };
 
-        const APP_PREFIX = "GM-V3-";
-
         function App() {
-            // Modes
             const [mode, setMode] = useState('home');
             const [roomCode, setRoomCode] = useState(['', '', '', '', '', '']); 
             const [generatedCode, setGeneratedCode] = useState('');
             const [status, setStatus] = useState('');
             const [isHost, setIsHost] = useState(false);
             
-            // Media & Settings
-            const [mediaType, setMediaType] = useState('video');
+            // Media
+            const [mediaType, setMediaType] = useState('video'); // 'video', 'audio', 'text'
             const [localStream, setLocalStream] = useState(null);
             const [remoteStream, setRemoteStream] = useState(null);
-            const [subtitles, setSubtitles] = useState([]); // { id, text, translated, isLocal }
+            const [remoteMediaType, setRemoteMediaType] = useState('unknown');
+            const [subtitles, setSubtitles] = useState([]); 
             const [myLang, setMyLang] = useState('ko');
             const [showSettings, setShowSettings] = useState(false);
             const [geminiKey, setGeminiKey] = useState('');
+            const [connectionTime, setConnectionTime] = useState(0); 
             
             // Refs
             const localVideoRef = useRef(null);
@@ -122,12 +157,32 @@
             const recognitionRef = useRef(null);
             const geminiKeyRef = useRef('');
             const inputRefs = useRef([]);
+            const timerRef = useRef(null);
+            const chatEndRef = useRef(null);
 
             // Init Settings
             useEffect(() => {
                 const savedKey = localStorage.getItem('gemini_api_key');
                 if (savedKey) { setGeminiKey(savedKey); geminiKeyRef.current = savedKey; }
             }, []);
+
+            // Auto-scroll chat
+            useEffect(() => {
+                if (chatEndRef.current) {
+                    chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, [subtitles]);
+
+            // Timer
+            useEffect(() => {
+                if (mode === 'call' && !remoteStream) {
+                    timerRef.current = setInterval(() => setConnectionTime(prev => prev + 1), 1000);
+                } else {
+                    clearInterval(timerRef.current);
+                    setConnectionTime(0);
+                }
+                return () => clearInterval(timerRef.current);
+            }, [mode, remoteStream]);
 
             // --- Media Handling ---
             const getMediaStream = async () => {
@@ -141,18 +196,18 @@
                     try {
                         const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
                         setMediaType('audio');
-                        setStatus("카메라 없음 (음성 모드)");
+                        setStatus("오디오 모드로 전환됨");
                         return audioStream;
                     } catch (err2) {
                         console.error("Audio failed:", err2);
                         setMediaType('text');
-                        setStatus("장치 없음 (자막 모드)");
+                        setStatus("텍스트 모드로 전환됨");
                         return null;
                     }
                 }
             };
 
-            // --- Host Logic ---
+            // --- PeerJS Logic (Simplified for brevity) ---
             const createRoom = async () => {
                 const code = Math.floor(100000 + Math.random() * 900000).toString();
                 setGeneratedCode(code);
@@ -161,72 +216,60 @@
                 initPeer(code);
             };
 
-            // --- Join Logic ---
             const joinRoom = async () => {
                 const code = roomCode.join('');
-                if (code.length !== 6) return alert("6자리 코드를 모두 입력해주세요.");
+                if (code.length !== 6) return alert("6자리 코드를 입력하세요.");
                 setIsHost(false);
                 setMode('join_connecting');
                 
                 const peer = new Peer({ debug: 1 });
                 peerRef.current = peer;
-
                 peer.on('open', () => {
-                    setStatus("서버 접속 성공. 호스트 찾는 중...");
+                    setStatus("호스트 찾는 중...");
                     connectToHost(peer, code);
                 });
-
-                peer.on('error', (err) => handlePeerError(err));
+                peer.on('error', handlePeerError);
             };
 
-            // Common Peer Init
             const initPeer = (code) => {
                 if (peerRef.current) peerRef.current.destroy();
-                const myPeerId = `${APP_PREFIX}${code}`;
-                const peer = new Peer(myPeerId, { debug: 1 });
-                
+                const peer = new Peer(`${APP_PREFIX}${code}`, { debug: 1 });
                 peer.on('open', () => setStatus("참여자 대기 중..."));
                 peer.on('connection', (conn) => setupDataConnection(conn));
                 peer.on('call', (call) => {
                     setStatus("연결 요청 수신...");
                     answerCall(call);
                 });
-                peer.on('error', (err) => handlePeerError(err));
+                peer.on('error', handlePeerError);
                 peerRef.current = peer;
             };
 
             const handlePeerError = (err) => {
-                console.error("Peer Error:", err);
-                if (err.type === 'unavailable-id') {
-                    alert("이미 사용 중인 방 코드입니다.");
-                    window.location.reload();
-                } else if (err.type === 'peer-unavailable') {
-                    alert("방을 찾을 수 없습니다. 코드를 확인하세요.");
+                if (err.type === 'peer-unavailable') {
+                    alert("방을 찾을 수 없습니다.");
                     setMode('home');
                 } else {
                     setStatus(`오류: ${err.type}`);
                 }
             };
 
-            // --- Connection Logic ---
             const connectToHost = async (peer, hostCode) => {
-                const hostPeerId = `${APP_PREFIX}${hostCode}`;
-                const conn = peer.connect(hostPeerId);
+                const hostId = `${APP_PREFIX}${hostCode}`;
+                const conn = peer.connect(hostId);
                 conn.on('open', () => {
-                    setStatus("데이터 채널 연결됨");
+                    setStatus("데이터 연결됨");
                     setupDataConnection(conn);
                 });
-                conn.on('error', (err) => console.error("Conn Error", err));
-
+                
                 const stream = await getMediaStream();
                 setLocalStream(stream);
                 setMode('call');
 
                 if (stream) {
-                    const call = peer.call(hostPeerId, stream);
+                    const call = peer.call(hostId, stream);
                     setupCallEvents(call);
                 } else {
-                    setStatus("텍스트 모드로 연결됨");
+                    setStatus("텍스트 모드 연결");
                     setupSpeechRecognition(); 
                 }
             };
@@ -234,19 +277,18 @@
             const answerCall = async (call) => {
                 const stream = await getMediaStream();
                 setLocalStream(stream);
-                if (stream) call.answer(stream);
-                else call.answer(); 
+                if (stream) call.answer(stream); else call.answer(); 
                 setupCallEvents(call);
                 setMode('call');
             };
 
             const setupCallEvents = (call) => {
                 callRef.current = call;
-                call.on('stream', (remoteStream) => {
-                    setRemoteStream(remoteStream);
+                call.on('stream', (rs) => {
+                    setRemoteStream(rs);
+                    setRemoteMediaType(rs.getVideoTracks().length > 0 ? 'video' : 'audio');
                     setStatus("연결됨");
                 });
-                call.on('error', (e) => console.error("Call Error", e));
                 setupSpeechRecognition(); 
             };
 
@@ -254,28 +296,18 @@
                 connRef.current = conn;
                 conn.on('data', async (data) => {
                     if (data.type === 'subtitle') {
-                        // 상대방 말이 오면 내 언어로 번역
                         const translated = await translateWithGemini(data.text, myLang);
-                        setSubtitles(prev => [...prev.slice(-3), { 
-                            id: Date.now(),
-                            text: data.text,
-                            translated: translated, 
-                            isLocal: false // 상대방 말
-                        }]);
+                        setSubtitles(prev => [...prev, { id: Date.now(), text: data.text, translated, isLocal: false }]);
                         speak(translated, myLang);
                     }
                 });
-                conn.on('open', () => {
-                    if (mode !== 'call') setStatus("연결 준비 완료");
-                });
+                conn.on('open', () => { if (mode !== 'call') setStatus("연결 준비 완료"); });
             };
 
             // --- STT & AI ---
             const setupSpeechRecognition = () => {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (!SpeechRecognition) return;
-                
-                if (recognitionRef.current) return;
+                if (!SpeechRecognition || recognitionRef.current) return;
 
                 const recognition = new SpeechRecognition();
                 recognition.continuous = true;
@@ -288,33 +320,16 @@
                         if (event.results[i].isFinal) {
                             final += event.results[i][0].transcript;
                             if (final.trim()) {
-                                // 1. 상대방에게 전송 (원문)
-                                if (connRef.current?.open) {
-                                    connRef.current.send({ type: 'subtitle', text: final });
-                                }
+                                if (connRef.current?.open) connRef.current.send({ type: 'subtitle', text: final });
                                 
-                                // 2. 내 화면에 표시하기 위해 '상대방 언어(추정)'로 번역 시도
-                                // 여기서는 단순하게 내 언어가 한국어면 영어로, 영어면 한국어로 번역해서 보여줌
-                                const targetLangForMe = myLang === 'ko' ? 'en' : 'ko';
-                                const myTranslated = await translateWithGemini(final, targetLangForMe);
-
-                                setSubtitles(prev => [...prev.slice(-3), {
-                                    id: Date.now(),
-                                    text: final, // 원문 (내가 한 말)
-                                    translated: myTranslated, // 번역문 (상대에게 이렇게 보일 것)
-                                    isLocal: true // 내 말
-                                }]);
+                                const target = myLang === 'ko' ? 'en' : 'ko';
+                                const myTrans = await translateWithGemini(final, target);
+                                setSubtitles(prev => [...prev, { id: Date.now(), text: final, translated: myTrans, isLocal: true }]);
                             }
                         }
                     }
                 };
-                
-                try {
-                    recognition.start();
-                    recognitionRef.current = recognition;
-                } catch (e) {
-                    console.warn("STT Start failed:", e);
-                }
+                try { recognition.start(); recognitionRef.current = recognition; } catch (e) {}
             };
 
             const translateWithGemini = async (text, targetLang) => {
@@ -341,6 +356,7 @@
                 window.speechSynthesis.speak(u);
             };
 
+            // UI Helpers
             const handleOtpChange = (index, value) => {
                 if (isNaN(value)) return;
                 const newCode = [...roomCode];
@@ -348,13 +364,7 @@
                 setRoomCode(newCode);
                 if (value && index < 5) inputRefs.current[index + 1].focus();
             };
-
-            const handleKeyDown = (index, e) => {
-                if (e.key === 'Backspace' && !roomCode[index] && index > 0) {
-                    inputRefs.current[index - 1].focus();
-                }
-            };
-
+            const handleKeyDown = (i, e) => { if (e.key === 'Backspace' && !roomCode[i] && i > 0) inputRefs.current[i - 1].focus(); };
             const saveSettings = (e) => {
                 e.preventDefault();
                 const key = new FormData(e.target).get('apiKey');
@@ -370,148 +380,156 @@
             }, [localStream, remoteStream, mode]);
 
             // --- Render ---
-
-            // 1. Home
-            if (mode === 'home') {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-4">
-                        <div className="glass-card max-w-md w-full rounded-3xl p-8 text-slate-800 text-center relative animate-slide-up">
-                            <button onClick={() => setShowSettings(true)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600"><i className="fas fa-cog text-xl"></i></button>
-                            
-                            <div className="mb-8">
-                                <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-3xl mx-auto flex items-center justify-center text-white text-3xl shadow-xl mb-4"><i className="fas fa-bolt"></i></div>
-                                <h1 className="text-3xl font-bold text-slate-900">GlobalMeet</h1>
-                                <p className="text-slate-500 mt-2">쉽고 빠른 AI 통역 화상회의</p>
-                            </div>
-
-                            <div className="space-y-4">
-                                <button onClick={createRoom} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
-                                    <i className="fas fa-plus-circle"></i> 새 회의 만들기 (방장)
-                                </button>
-                                <div className="text-slate-400 text-sm font-medium">- 또는 -</div>
-                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                                    <p className="text-sm font-bold text-slate-600 mb-4">참여 코드 입력</p>
-                                    <div className="flex justify-between gap-2 mb-4">
-                                        {roomCode.map((digit, idx) => (
-                                            <input key={idx} ref={el => inputRefs.current[idx] = el} type="text" maxLength="1" value={digit} onChange={(e) => handleOtpChange(idx, e.target.value)} onKeyDown={(e) => handleKeyDown(idx, e)} className="otp-input" />
-                                        ))}
-                                    </div>
-                                    <button onClick={joinRoom} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900 transition">입장하기</button>
+            if (mode === 'home') return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="glass-card max-w-md w-full rounded-3xl p-8 text-slate-800 text-center animate-slide-up relative">
+                        <button onClick={() => setShowSettings(true)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600"><i className="fas fa-cog text-xl"></i></button>
+                        <div className="mb-8">
+                            <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-3xl mx-auto flex items-center justify-center text-white text-3xl shadow-xl mb-4"><i className="fas fa-bolt"></i></div>
+                            <h1 className="text-3xl font-bold text-slate-900">GlobalMeet</h1>
+                            <p className="text-slate-500 mt-2">AI 통역 화상회의</p>
+                        </div>
+                        <div className="space-y-4">
+                            <button onClick={createRoom} className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-lg flex items-center justify-center gap-3"><i className="fas fa-plus-circle"></i> 새 회의 만들기 (방장)</button>
+                            <div className="text-slate-400 text-sm font-medium">- 또는 -</div>
+                            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                                <p className="text-sm font-bold text-slate-600 mb-4">참여 코드 입력</p>
+                                <div className="flex justify-between gap-2 mb-4">
+                                    {roomCode.map((d, i) => <input key={i} ref={el => inputRefs.current[i] = el} type="text" maxLength="1" value={d} onChange={e => handleOtpChange(i, e.target.value)} onKeyDown={e => handleKeyDown(i, e)} className="otp-input" />)}
                                 </div>
+                                <button onClick={joinRoom} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold hover:bg-slate-900">입장하기</button>
                             </div>
-                            
-                            {showSettings && (
-                                <div className="absolute inset-0 bg-white/95 backdrop-blur-md rounded-3xl z-50 flex flex-col items-center justify-center p-6 animate-fade-in">
-                                    <h3 className="font-bold mb-4">설정</h3>
-                                    <form onSubmit={saveSettings} className="w-full space-y-4">
-                                        <input name="apiKey" defaultValue={geminiKey} placeholder="Gemini API Key" className="w-full p-3 border rounded-xl bg-slate-50" />
-                                        <div className="flex gap-2">
-                                            <button type="button" onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-200 rounded-xl font-bold">취소</button>
-                                            <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">저장</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            )}
                         </div>
-                    </div>
-                );
-            }
-
-            // 2. Host
-            if (mode === 'host') {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-4">
-                        <div className="glass-card max-w-md w-full rounded-3xl p-10 text-slate-800 text-center animate-slide-up">
-                            <h2 className="text-xl font-bold text-slate-500 mb-6">참여 코드</h2>
-                            <div className="text-6xl font-black text-blue-600 tracking-widest mb-2 font-mono">{generatedCode.slice(0,3)} {generatedCode.slice(3)}</div>
-                            <p className="text-sm text-slate-400 mb-8">상대방에게 이 6자리 숫자를 알려주세요.</p>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
-                                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                                <p className="text-sm font-medium text-slate-600">{status}</p>
-                            </div>
-                            <button onClick={() => window.location.reload()} className="text-red-500 text-sm font-bold hover:underline">취소하고 나가기</button>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 3. Join
-            if (mode === 'join_connecting') {
-                return (
-                    <div className="min-h-screen flex items-center justify-center p-4">
-                        <div className="glass-card max-w-sm w-full rounded-3xl p-8 text-center animate-slide-up">
-                            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <h2 className="text-xl font-bold text-slate-800 mb-2">연결 중...</h2>
-                            <p className="text-slate-500 text-sm">{status}</p>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 4. Call Screen
-            return (
-                <div className="relative h-full w-full bg-slate-900 overflow-hidden">
-                    {/* Remote View */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black">
-                        {remoteStream ? (
-                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                        ) : (
-                            <div className="text-center text-white/50">
-                                {status.includes('연결됨') ? (
-                                    <div className="flex flex-col items-center">
-                                        <i className="fas fa-microphone-alt text-6xl mb-4 opacity-50"></i>
-                                        <p className="text-xl font-light">오디오/자막 모드로 연결됨</p>
-                                        <p className="text-sm mt-2 opacity-70">영상 수신 대기 중...</p>
+                        {showSettings && (
+                            <div className="absolute inset-0 bg-white/95 backdrop-blur-md rounded-3xl z-50 flex flex-col items-center justify-center p-6 animate-fade-in">
+                                <h3 className="font-bold mb-4">설정</h3>
+                                <form onSubmit={saveSettings} className="w-full space-y-4">
+                                    <input name="apiKey" defaultValue={geminiKey} placeholder="Gemini API Key" className="w-full p-3 border rounded-xl bg-slate-50" />
+                                    <div className="flex gap-2">
+                                        <button type="button" onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-200 rounded-xl font-bold">취소</button>
+                                        <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">저장</button>
                                     </div>
-                                ) : <div className="animate-pulse">연결 대기 중...</div>}
+                                </form>
                             </div>
                         )}
                     </div>
+                </div>
+            );
 
-                    {/* [수정] Subtitles Area (Dual Mode) */}
-                    <div className="absolute bottom-32 left-0 right-0 px-6 flex flex-col items-center pointer-events-none z-10 space-y-3">
-                        {subtitles.slice(-3).map(sub => (
-                            <div key={sub.id} className={`max-w-2xl w-full flex ${sub.isLocal ? 'justify-end' : 'justify-start'} animate-slide-up`}>
-                                <div className={`px-6 py-4 rounded-2xl border backdrop-blur-xl shadow-xl ${
-                                    sub.isLocal 
-                                    ? 'bg-blue-600/80 border-blue-500/50 text-white rounded-br-none' 
-                                    : 'bg-black/60 border-white/20 text-white rounded-bl-none'
-                                }`}>
-                                    {sub.isLocal ? (
-                                        <>
-                                            <div className="text-base font-medium">나: {sub.text}</div>
-                                            <div className="text-xs text-blue-200 mt-1 flex items-center gap-1 opacity-90">
-                                                <i className="fas fa-arrow-right text-[10px]"></i> {sub.translated}
-                                            </div>
-                                        </>
+            if (mode === 'host') return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="glass-card max-w-md w-full rounded-3xl p-10 text-slate-800 text-center animate-slide-up">
+                        <h2 className="text-xl font-bold text-slate-500 mb-6">참여 코드</h2>
+                        <div className="text-6xl font-black text-blue-600 tracking-widest mb-2 font-mono">{generatedCode.slice(0,3)} {generatedCode.slice(3)}</div>
+                        <p className="text-sm text-slate-400 mb-8">상대방에게 이 코드를 알려주세요.</p>
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                            <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                            <p className="text-sm font-medium text-slate-600">{status}</p>
+                        </div>
+                        <button onClick={() => window.location.reload()} className="text-red-500 text-sm font-bold hover:underline">취소</button>
+                    </div>
+                </div>
+            );
+
+            if (mode === 'join_connecting') return (
+                <div className="min-h-screen flex items-center justify-center p-4">
+                    <div className="glass-card max-w-sm w-full rounded-3xl p-8 text-center animate-slide-up">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <h2 className="text-xl font-bold text-slate-800 mb-2">연결 중...</h2>
+                        <p className="text-slate-500 text-sm">{status}</p>
+                    </div>
+                </div>
+            );
+
+            // --- Main Call Screen ---
+            const isVideoMode = mediaType === 'video' && remoteMediaType === 'video' && remoteStream;
+            
+            return (
+                <div className="relative h-full w-full bg-slate-900 overflow-hidden flex flex-col">
+                    
+                    {/* 1. Main Content Area */}
+                    <div className="flex-1 relative flex items-center justify-center bg-black/90">
+                        {isVideoMode ? (
+                            // [Video Mode] Full Screen Video
+                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
+                        ) : (
+                            // [Audio/Text Mode] Chat UI (Full Center)
+                            <div className="w-full h-full max-w-3xl flex flex-col p-6 animate-fade-in">
+                                {/* Header Info */}
+                                <div className="flex items-center justify-center gap-2 mb-6 opacity-70">
+                                    {mediaType === 'audio' || remoteMediaType === 'audio' ? (
+                                        <div className="audio-wave"><i className="fas fa-microphone"></i></div>
                                     ) : (
-                                        <>
-                                            <div className="text-2xl font-bold text-yellow-300 drop-shadow-md leading-relaxed">{sub.translated}</div>
-                                            <div className="text-xs text-slate-300 mt-1 opacity-80">{sub.text}</div>
-                                        </>
+                                        <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center text-3xl"><i className="fas fa-comment-dots"></i></div>
                                     )}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                                <div className="text-center text-slate-400 text-sm mb-4 bg-white/5 py-1 px-3 rounded-full self-center">
+                                    {status.includes('연결됨') ? `● 실시간 대화 중 (${mediaType === 'audio' ? '오디오' : '텍스트'} 모드)` : `● ${status}`}
+                                </div>
 
-                    {/* Local View (PIP) */}
-                    <div className="absolute top-6 right-6 w-48 aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-20 group">
-                        {localStream ? (
-                            <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-slate-800 text-xs text-slate-400 flex-col gap-1">
-                                <i className="fas fa-video-slash"></i><span>카메라 없음</span>
+                                {/* Chat Logs (Scrollable) */}
+                                <div className="flex-1 overflow-y-auto chat-scroll space-y-4 px-2 pb-20">
+                                    {subtitles.length === 0 && (
+                                        <div className="text-center text-slate-500 mt-20">
+                                            <p>대화를 시작해보세요.</p>
+                                            <p className="text-xs mt-1">말하면 자동으로 번역되어 표시됩니다.</p>
+                                        </div>
+                                    )}
+                                    {subtitles.map(sub => (
+                                        <div key={sub.id} className={`flex flex-col ${sub.isLocal ? 'items-end' : 'items-start'} animate-slide-up`}>
+                                            <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm shadow-lg ${
+                                                sub.isLocal 
+                                                ? 'bg-blue-600 text-white rounded-br-none' 
+                                                : 'bg-slate-700 text-white rounded-bl-none'
+                                            }`}>
+                                                {sub.isLocal ? (
+                                                    // 내 말: 원문 위, 번역 아래 (작게)
+                                                    <>
+                                                        <div className="font-medium mb-1">{sub.text}</div>
+                                                        <div className="text-blue-200 text-xs border-t border-blue-500 pt-1 flex items-center gap-1">
+                                                            <i className="fas fa-language"></i> {sub.translated}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    // 상대 말: 번역 위 (크게), 원문 아래 (작게)
+                                                    <>
+                                                        <div className="text-lg font-bold text-yellow-300 mb-1">{sub.translated}</div>
+                                                        <div className="text-slate-400 text-xs border-t border-slate-600 pt-1">
+                                                            {sub.text}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={chatEndRef} />
+                                </div>
                             </div>
                         )}
-                        <div className="absolute bottom-2 left-2 text-[10px] bg-black/60 px-2 py-1 rounded text-white font-bold">
-                            {mediaType === 'video' ? 'VIDEO ON' : 'AUDIO/TEXT'}
-                        </div>
+                        
+                        {/* Subtitles Overlay (Only visible in Video Mode) */}
+                        {isVideoMode && (
+                            <div className="absolute bottom-32 left-0 right-0 px-6 flex flex-col items-center pointer-events-none z-10 space-y-2">
+                                {subtitles.slice(-2).map(sub => (
+                                    <div key={sub.id} className={`max-w-xl w-full px-6 py-4 rounded-2xl backdrop-blur-xl shadow-xl border border-white/10 ${sub.isLocal ? 'bg-black/40 text-right' : 'bg-black/60 text-left'}`}>
+                                        <div className="text-xl font-bold text-yellow-300 drop-shadow-md">{sub.translated}</div>
+                                        <div className="text-xs text-slate-300 mt-1 opacity-80">{sub.text}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Controls */}
-                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-20 flex gap-4">
-                        <div className="glass-bar flex items-center gap-4 p-4 rounded-full shadow-2xl">
+                    {/* 2. Local PIP (Only in Video Mode) */}
+                    {isVideoMode && (
+                        <div className="absolute top-6 right-6 w-48 aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-20">
+                            {localStream ? <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-xs text-slate-400">카메라 끔</div>}
+                        </div>
+                    )}
+
+                    {/* 3. Bottom Controls */}
+                    <div className="absolute bottom-0 left-0 right-0 p-6 flex justify-center bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                        <div className="glass-panel flex items-center gap-4 p-4 rounded-full shadow-2xl pointer-events-auto">
                             <button onClick={() => window.location.reload()} className="w-12 h-12 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-xl transition shadow-lg">
                                 <i className="fas fa-phone-slash"></i>
                             </button>
