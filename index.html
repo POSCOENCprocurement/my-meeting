@@ -65,10 +65,19 @@
             const [myId, setMyId] = useState('');
             const [targetId, setTargetId] = useState('');
             const [status, setStatus] = useState('Initializing...');
+            const [isServerConnected, setIsServerConnected] = useState(false);
             const [showSettings, setShowSettings] = useState(false);
             const [showSummary, setShowSummary] = useState(false);
-            const [debugInfo, setDebugInfo] = useState({ local: 'Inactive', remote: 'Inactive' });
             
+            // [추가] 상세 진단 정보 상태
+            const [mediaStatus, setMediaStatus] = useState({
+                localVideo: '없음',
+                localAudio: '없음',
+                remoteVideo: '대기중',
+                remoteAudio: '대기중'
+            });
+            const [showDiagnostics, setShowDiagnostics] = useState(false);
+
             const [localStream, setLocalStream] = useState(null);
             const [remoteStream, setRemoteStream] = useState(null);
             const [isMuted, setIsMuted] = useState(false);
@@ -100,6 +109,34 @@
                 const savedTurn = localStorage.getItem('turn_config');
                 if (savedTurn) setTurnConfig(JSON.parse(savedTurn));
             }, []);
+
+            // [추가] 미디어 트랙 상태 모니터링 (진단용)
+            useEffect(() => {
+                const checkInterval = setInterval(() => {
+                    const status = {
+                        localVideo: '없음', localAudio: '없음',
+                        remoteVideo: '대기중', remoteAudio: '대기중'
+                    };
+
+                    if (localStream) {
+                        const vTrack = localStream.getVideoTracks()[0];
+                        const aTrack = localStream.getAudioTracks()[0];
+                        status.localVideo = vTrack ? (vTrack.enabled ? '정상 (송출중)' : '꺼짐 (Muted)') : '트랙 없음';
+                        status.localAudio = aTrack ? (aTrack.enabled ? '정상 (송출중)' : '꺼짐 (Muted)') : '트랙 없음';
+                    }
+
+                    if (remoteStream) {
+                        const vTrack = remoteStream.getVideoTracks()[0];
+                        const aTrack = remoteStream.getAudioTracks()[0];
+                        status.remoteVideo = vTrack ? (vTrack.enabled && vTrack.readyState === 'live' ? '수신중 (Live)' : `비정상 (${vTrack.readyState})`) : '트랙 없음';
+                        status.remoteAudio = aTrack ? (aTrack.enabled ? '수신중' : '상대방이 끔') : '트랙 없음';
+                    }
+
+                    setMediaStatus(status);
+                }, 2000);
+
+                return () => clearInterval(checkInterval);
+            }, [localStream, remoteStream]);
 
             // Cleanup logic
             const stopEverything = () => {
@@ -202,11 +239,25 @@
                     debug: 1
                 }); 
                 
-                peer.on('open', (id) => { setMyId(id); setStatus('Ready'); });
+                peer.on('open', (id) => { 
+                    setMyId(id); 
+                    setStatus('준비됨 (Ready)'); 
+                    setIsServerConnected(true);
+                });
+                
                 peer.on('error', (err) => {
                     console.error("Peer Error:", err);
-                    setStatus("Error: " + err.type); 
-                    if(err.type === 'peer-unavailable') alert("상대방 ID를 찾을 수 없습니다.");
+                    
+                    if(err.type === 'peer-unavailable') {
+                        setStatus("오류: 상대방 ID 없음");
+                        alert("❌ 상대방 ID를 찾을 수 없습니다.\n상대방이 앱을 켜고 '준비됨' 상태인지 확인하세요.");
+                    } else if(err.type === 'network' || err.type === 'server-error') {
+                        setStatus("오류: 네트워크 차단됨");
+                        alert("⚠️ 보안 네트워크 문제\n서버 접속이 차단되었습니다. 핫스팟을 이용해주세요.");
+                    } else {
+                        setStatus("오류: " + err.type);
+                    }
+                    setIsServerConnected(false);
                 });
 
                 peer.on('connection', (conn) => {
@@ -215,17 +266,14 @@
                 });
 
                 peer.on('call', (call) => {
-                    setStatus('Incoming Call...');
+                    setStatus('연결 요청 수신중...');
                     navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
                         setLocalStream(stream);
-                        setDebugInfo(prev => ({ ...prev, local: 'Active' }));
-                        
                         call.answer(stream);
                         call.on('stream', (remoteStream) => {
                             setRemoteStream(remoteStream);
-                            setDebugInfo(prev => ({ ...prev, remote: 'Active' }));
                             setMode('call');
-                            setStatus('Connected');
+                            setStatus('연결됨 (Connected)');
                         });
                         callRef.current = call;
                         setupSpeechRecognition();
@@ -244,12 +292,17 @@
                         speak(translated, myLang);
                     }
                 });
-                conn.on('open', () => setStatus('Data Connected'));
+                conn.on('open', () => setStatus('데이터 채널 연결됨'));
             };
 
             const connectToPeer = () => {
                 if (!targetId) return alert("ID를 입력하세요.");
-                setStatus('Connecting...');
+                
+                if (!isServerConnected) {
+                    return alert("⚠️ 내 컴퓨터가 아직 서버에 연결되지 않았습니다.\n잠시 기다리거나 페이지를 새로고침 해주세요.");
+                }
+
+                setStatus('연결 시도 중...');
                 
                 const conn = peerRef.current.connect(targetId);
                 if(conn) {
@@ -259,14 +312,12 @@
 
                 navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
                     setLocalStream(stream);
-                    setDebugInfo(prev => ({ ...prev, local: 'Active' }));
                     setMode('call');
                     
                     const call = peerRef.current.call(targetId, stream);
                     call.on('stream', (rs) => { 
                         setRemoteStream(rs); 
-                        setDebugInfo(prev => ({ ...prev, remote: 'Active' }));
-                        setStatus('Connected'); 
+                        setStatus('연결됨 (Connected)'); 
                     });
                     call.on('error', (e) => setStatus("Call Error: " + e));
                     callRef.current = call;
@@ -310,16 +361,29 @@
                 window.location.reload(); 
             };
 
+            const safePlay = (videoEl) => {
+                if (!videoEl) return;
+                const playPromise = videoEl.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        if (error.name === 'AbortError' || error.message.includes('interrupted') || error.message.includes('removed')) {
+                            // Ignore harmless errors
+                        } else {
+                            console.error('Playback Error:', error);
+                        }
+                    });
+                }
+            };
+
             const refreshVideo = () => {
                 if (localStream && localVideoRef.current) {
                     localVideoRef.current.srcObject = localStream;
-                    localVideoRef.current.play().catch(e => { if(e.name !== 'AbortError') console.log("Local Play Error:", e); });
+                    safePlay(localVideoRef.current);
                 }
                 if (remoteStream && remoteVideoRef.current) {
                     remoteVideoRef.current.srcObject = remoteStream;
-                    remoteVideoRef.current.play().catch(e => { if(e.name !== 'AbortError') console.log("Remote Play Error:", e); });
+                    safePlay(remoteVideoRef.current);
                 }
-                console.log("Forced video refresh");
             };
 
             const testCamera = async () => {
@@ -331,7 +395,6 @@
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                     setLocalStream(stream); 
-                    setDebugInfo(prev => ({ ...prev, local: 'Preview Active' }));
                 } catch (e) {
                     alert("카메라를 켤 수 없습니다: " + e.message);
                 }
@@ -341,23 +404,13 @@
                 if (localStream) {
                     localStream.getTracks().forEach(track => track.stop());
                     setLocalStream(null);
-                    setDebugInfo(prev => ({ ...prev, local: 'Stopped' }));
                 }
             };
 
-            // [수정] 미리보기 비디오 자동재생 로직 (안정적인 useEffect 사용)
             useEffect(() => {
                 if (mode === 'welcome' && localStream && previewVideoRef.current) {
-                    const videoEl = previewVideoRef.current;
-                    videoEl.srcObject = localStream;
-                    const playPromise = videoEl.play();
-                    
-                    if (playPromise !== undefined) {
-                        playPromise.catch(e => {
-                            // AbortError(사용자 중단) 등은 무시하여 로그를 깨끗하게 유지
-                            if (e.name !== 'AbortError') console.error("Preview Play Failed:", e.message);
-                        });
-                    }
+                    previewVideoRef.current.srcObject = localStream;
+                    safePlay(previewVideoRef.current);
                 }
             }, [localStream, mode]);
 
@@ -378,13 +431,14 @@
                             <div className="text-center mb-6">
                                 <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl shadow-lg mb-4"><i className="fas fa-bolt"></i></div>
                                 <h1 className="text-2xl font-bold text-slate-900">GlobalMeet AI</h1>
-                                <p className="text-xs text-blue-500 mt-2 font-mono bg-blue-50 py-1 px-2 rounded inline-block">Status: {status}</p>
+                                <p className="text-xs text-blue-500 mt-2 font-mono bg-blue-50 py-1 px-2 rounded inline-block">
+                                    {isServerConnected ? "🟢 " : "🔴 "} {status}
+                                </p>
                             </div>
 
                             <div className="mb-6">
                                 {localStream ? (
                                     <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden mb-2">
-                                        {/* [수정] onPreviewVideoMount 대신 previewVideoRef 사용 */}
                                         <video ref={previewVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
                                         <div className="absolute bottom-2 left-2 bg-green-500 text-white text-[10px] px-2 py-1 rounded">카메라 정상 작동 중</div>
                                         <button onClick={stopCamera} className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600 text-white text-xs px-2 py-1 rounded shadow transition">
@@ -455,10 +509,33 @@
                 <div className="relative h-full w-full bg-slate-900 overflow-hidden">
                     {/* Remote Video */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black">
-                        <div className="absolute top-4 left-4 z-40 bg-black/50 text-[10px] text-white p-2 rounded pointer-events-none">
-                            <p>Status: {status}</p>
-                            <p>Local Video: {debugInfo.local}</p>
-                            <p>Remote Video: {debugInfo.remote}</p>
+                        
+                        {/* [추가] 진단 패널 */}
+                        <div className="absolute top-4 left-4 z-40 flex flex-col gap-2 pointer-events-auto">
+                            <button 
+                                onClick={() => setShowDiagnostics(!showDiagnostics)} 
+                                className="bg-black/50 hover:bg-black/70 text-white px-3 py-1 rounded text-xs backdrop-blur-md self-start border border-white/10"
+                            >
+                                <i className="fas fa-stethoscope"></i> {showDiagnostics ? "진단 닫기" : "진단"}
+                            </button>
+                            
+                            {showDiagnostics && (
+                                <div className="bg-black/80 p-3 rounded-lg text-[10px] text-white backdrop-blur-md border border-white/10 w-48 space-y-2">
+                                    <div>
+                                        <p className="font-bold text-blue-300">내 상태 (Local)</p>
+                                        <p>비디오: <span className={mediaStatus.localVideo.includes('정상') ? 'text-green-400' : 'text-red-400'}>{mediaStatus.localVideo}</span></p>
+                                        <p>오디오: <span className={mediaStatus.localAudio.includes('정상') ? 'text-green-400' : 'text-red-400'}>{mediaStatus.localAudio}</span></p>
+                                    </div>
+                                    <div className="border-t border-white/20 pt-2">
+                                        <p className="font-bold text-purple-300">상대방 상태 (Remote)</p>
+                                        <p>비디오: <span className={mediaStatus.remoteVideo.includes('수신중') ? 'text-green-400' : 'text-red-400'}>{mediaStatus.remoteVideo}</span></p>
+                                        <p>오디오: <span className={mediaStatus.remoteAudio.includes('수신중') ? 'text-green-400' : 'text-red-400'}>{mediaStatus.remoteAudio}</span></p>
+                                    </div>
+                                    <div className="border-t border-white/20 pt-2 text-xs text-slate-400">
+                                        <p>연결 상태: {status}</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {remoteStream ? (
@@ -467,7 +544,7 @@
                                 autoPlay 
                                 playsInline 
                                 className="w-full h-full object-cover"
-                                onLoadedMetadata={(e) => e.target.play()} 
+                                onLoadedMetadata={(e) => safePlay(e.target)} 
                             />
                         ) : (
                             <div className="text-center animate-pulse text-white/50">
@@ -502,7 +579,7 @@
                             playsInline 
                             muted 
                             className={`w-full h-full object-cover transform scale-x-[-1] ${isVideoOff ? 'hidden' : ''}`} 
-                            onLoadedMetadata={(e) => e.target.play()}
+                            onLoadedMetadata={(e) => safePlay(e.target)}
                         />
                         {isVideoOff && <div className="w-full h-full flex items-center justify-center bg-slate-800"><i className="fas fa-video-slash text-white/30 text-2xl"></i></div>}
                     </div>
