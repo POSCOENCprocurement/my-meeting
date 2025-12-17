@@ -64,12 +64,12 @@
             const [mode, setMode] = useState('welcome');
             const [myId, setMyId] = useState('');
             const [targetId, setTargetId] = useState('');
-            const [status, setStatus] = useState('Initializing...');
-            const [isServerConnected, setIsServerConnected] = useState(false);
+            const [status, setStatus] = useState('서버 연결 중...'); 
+            const [isServerConnected, setIsServerConnected] = useState(false); 
             const [showSettings, setShowSettings] = useState(false);
             const [showSummary, setShowSummary] = useState(false);
+            const [retryCount, setRetryCount] = useState(0); // [추가] 재접속 카운터
             
-            // [추가] 상세 진단 정보 상태
             const [mediaStatus, setMediaStatus] = useState({
                 localVideo: '없음',
                 localAudio: '없음',
@@ -110,7 +110,7 @@
                 if (savedTurn) setTurnConfig(JSON.parse(savedTurn));
             }, []);
 
-            // [추가] 미디어 트랙 상태 모니터링 (진단용)
+            // 미디어 트랙 상태 모니터링
             useEffect(() => {
                 const checkInterval = setInterval(() => {
                     const status = {
@@ -219,8 +219,10 @@
                 setIsSummarizing(false);
             };
 
-            // --- 2. PeerJS Setup ---
-            useEffect(() => {
+            // --- 2. PeerJS Setup (Reconnectable) ---
+            const initPeer = () => {
+                if (peerRef.current) peerRef.current.destroy();
+
                 let iceServers = [
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
@@ -239,6 +241,9 @@
                     debug: 1
                 }); 
                 
+                setStatus('서버 연결 중...');
+                setIsServerConnected(false);
+
                 peer.on('open', (id) => { 
                     setMyId(id); 
                     setStatus('준비됨 (Ready)'); 
@@ -250,14 +255,14 @@
                     
                     if(err.type === 'peer-unavailable') {
                         setStatus("오류: 상대방 ID 없음");
-                        alert("❌ 상대방 ID를 찾을 수 없습니다.\n상대방이 앱을 켜고 '준비됨' 상태인지 확인하세요.");
-                    } else if(err.type === 'network' || err.type === 'server-error') {
-                        setStatus("오류: 네트워크 차단됨");
-                        alert("⚠️ 보안 네트워크 문제\n서버 접속이 차단되었습니다. 핫스팟을 이용해주세요.");
+                        alert("❌ 상대방 ID를 찾을 수 없습니다.\n\n1. 코드를 정확히 복사했는지 확인하세요. (공백 주의)\n2. 상대방이 아직 '준비됨' 상태가 아닐 수 있습니다.\n3. 상대방에게 '재접속' 버튼을 누르라고 요청해보세요.");
+                    } else if(err.type === 'network' || err.type === 'server-error' || err.type === 'socket-error' || err.type === 'socket-closed') {
+                        setStatus("오류: 연결 끊김");
+                        setIsServerConnected(false);
+                        // alert("⚠️ 서버 연결이 끊어졌습니다. '재접속' 버튼을 눌러주세요.");
                     } else {
                         setStatus("오류: " + err.type);
                     }
-                    setIsServerConnected(false);
                 });
 
                 peer.on('connection', (conn) => {
@@ -280,9 +285,19 @@
                     }).catch(e => alert("Media Error: " + e));
                 });
 
+                peer.on('disconnected', () => {
+                    setStatus('서버와 연결 끊김 (재접속 필요)');
+                    setIsServerConnected(false);
+                });
+
                 peerRef.current = peer;
-                return () => peer.destroy();
-            }, [turnConfig]);
+            };
+
+            // Init on load
+            useEffect(() => {
+                initPeer();
+                return () => { if(peerRef.current) peerRef.current.destroy(); };
+            }, [turnConfig, retryCount]); // retryCount가 바뀌면 재시작
 
             const setupDataConnection = (conn) => {
                 conn.on('data', async (data) => {
@@ -296,15 +311,19 @@
             };
 
             const connectToPeer = () => {
-                if (!targetId) return alert("ID를 입력하세요.");
+                // [수정] 입력값 공백 제거 (Trim)
+                const safeTargetId = targetId.trim();
+                
+                if (!safeTargetId) return alert("ID를 입력하세요.");
+                if (safeTargetId === myId) return alert("자기 자신에게는 연결할 수 없습니다.");
                 
                 if (!isServerConnected) {
-                    return alert("⚠️ 내 컴퓨터가 아직 서버에 연결되지 않았습니다.\n잠시 기다리거나 페이지를 새로고침 해주세요.");
+                    return alert("⚠️ 내 컴퓨터가 아직 서버에 연결되지 않았습니다.\n상단의 '재접속' 버튼을 눌러주세요.");
                 }
 
                 setStatus('연결 시도 중...');
                 
-                const conn = peerRef.current.connect(targetId);
+                const conn = peerRef.current.connect(safeTargetId);
                 if(conn) {
                     connRef.current = conn;
                     setupDataConnection(conn);
@@ -314,7 +333,7 @@
                     setLocalStream(stream);
                     setMode('call');
                     
-                    const call = peerRef.current.call(targetId, stream);
+                    const call = peerRef.current.call(safeTargetId, stream);
                     call.on('stream', (rs) => { 
                         setRemoteStream(rs); 
                         setStatus('연결됨 (Connected)'); 
@@ -407,6 +426,12 @@
                 }
             };
 
+            // [추가] 수동 재접속 함수
+            const manualReconnect = () => {
+                setStatus("서버 재접속 중...");
+                setRetryCount(prev => prev + 1);
+            };
+
             useEffect(() => {
                 if (mode === 'welcome' && localStream && previewVideoRef.current) {
                     previewVideoRef.current.srcObject = localStream;
@@ -431,9 +456,26 @@
                             <div className="text-center mb-6">
                                 <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl shadow-lg mb-4"><i className="fas fa-bolt"></i></div>
                                 <h1 className="text-2xl font-bold text-slate-900">GlobalMeet AI</h1>
-                                <p className="text-xs text-blue-500 mt-2 font-mono bg-blue-50 py-1 px-2 rounded inline-block">
-                                    {isServerConnected ? "🟢 " : "🔴 "} {status}
-                                </p>
+                                
+                                {/* Status Indicator with Reconnect Button */}
+                                <div className="flex flex-col items-center gap-2 mt-2">
+                                    {geminiKey && (
+                                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100 flex items-center gap-1">
+                                            <i className="fas fa-check-circle"></i> Gemini AI 활성화됨
+                                        </span>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs text-blue-500 font-mono bg-blue-50 py-1 px-2 rounded inline-block flex items-center gap-2">
+                                            <span className={`w-2 h-2 rounded-full ${isServerConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
+                                            {status}
+                                        </p>
+                                        {!isServerConnected && (
+                                            <button onClick={manualReconnect} className="text-xs bg-slate-800 text-white px-2 py-1 rounded hover:bg-slate-700 transition">
+                                                <i className="fas fa-sync-alt"></i> 재접속
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="mb-6">
