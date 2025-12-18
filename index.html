@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GlobalMeet AI - Premium Design</title>
+    <title>GlobalMeet AI - Dual Chat</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -30,83 +30,90 @@
         body { 
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #000000;
-            background-image: 
-                radial-gradient(circle at 50% 0%, #1e1e2e 0%, #000000 60%);
             color: #ffffff;
             overflow: hidden;
         }
         
         /* Premium Glass Effect */
-        .glass-card {
-            background: rgba(25, 25, 25, 0.6);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
         
         .glass-dock {
-            background: rgba(10, 10, 10, 0.75);
+            background: rgba(10, 10, 10, 0.85);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
         }
 
         /* Animations */
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse-soft {
-            0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(2); opacity: 0; }
         }
         
-        .animate-enter { animation: fadeIn 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        .animate-slide-up { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
         
-        /* Audio Visualizer Effect */
         .visualizer-bar {
-            width: 4px;
-            background: #3b82f6;
-            border-radius: 2px;
-            animation: equalize 1s infinite ease-in-out;
+            width: 4px; background: #3b82f6; border-radius: 2px;
+            animation: equalize 0.5s infinite ease-in-out;
         }
         .visualizer-bar:nth-child(1) { animation-delay: -0.4s; height: 10px; }
         .visualizer-bar:nth-child(2) { animation-delay: -0.2s; height: 16px; }
         .visualizer-bar:nth-child(3) { animation-delay: -0.5s; height: 12px; }
-        
-        @keyframes equalize {
-            0%, 100% { transform: scaleY(1); opacity: 0.7; }
-            50% { transform: scaleY(1.5); opacity: 1; }
-        }
+        @keyframes equalize { 0%, 100% { transform: scaleY(1); opacity: 0.7; } 50% { transform: scaleY(1.5); opacity: 1; } }
 
         /* Input Fields */
         .otp-input {
-            width: 3.5rem; height: 4rem; font-size: 1.75rem; text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 1rem;
-            background-color: rgba(255, 255, 255, 0.05);
-            color: #ffffff; font-weight: 600;
-            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            width: 3rem; height: 3.5rem; font-size: 1.5rem; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 0.75rem;
+            background-color: rgba(255, 255, 255, 0.05); color: #ffffff; font-weight: 600;
+            transition: all 0.2s;
         }
         .otp-input:focus {
-            border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1);
-            outline: none; transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+            border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); outline: none; transform: translateY(-2px);
         }
         
-        /* Chat Bubble Gradient */
-        .bubble-me { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
-        .bubble-other { background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.05); }
+        /* Chat Bubbles */
+        .bubble-me { 
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2);
+        }
+        .bubble-other { 
+            background: rgba(40, 40, 40, 0.8); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            backdrop-filter: blur(8px); 
+        }
 
         /* Scrollbar */
-        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll { scroll-behavior: smooth; }
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+
+        /* Split View Helper */
+        .split-header {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
     </style>
 </head>
-<body class="text-white h-screen overflow-hidden">
+<body class="text-white h-screen w-screen overflow-hidden bg-black">
     
     <div id="root"></div>
 
@@ -116,15 +123,35 @@
 
         const APP_PREFIX = "GM-V3-";
 
-        // --- Mock Translation ---
+        const LANGUAGES = [
+            { code: 'ko', name: '한국어', flag: '🇰🇷' },
+            { code: 'en', name: 'English', flag: '🇺🇸' },
+            { code: 'ja', name: '日本語', flag: '🇯🇵' },
+            { code: 'zh', name: '中文', flag: '🇨🇳' }
+        ];
+
+        // --- Mock Translation (API Key 없을 때) ---
         const mockTranslate = async (text, targetLang) => {
             return new Promise((resolve) => {
                 setTimeout(() => {
                     let translated = text;
-                    if (targetLang === 'en' && /[가-힣]/.test(text)) translated = `[To English]: ${text}`; 
-                    else if (targetLang === 'ko' && /[a-zA-Z]/.test(text)) translated = `[한국어 번역]: ${text}`;
-                    resolve(translated);
-                }, 500);
+                    // [수정] 키가 없어도 데모용 번역 결과 반환 (테스트용)
+                    if (targetLang === 'en') {
+                         if (/[가-힣]/.test(text)) {
+                             translated = `[Demo] Translated: ${text}`;
+                             if (text.includes("안녕")) translated = "Hello.";
+                             if (text.includes("반가")) translated = "Nice to meet you.";
+                             if (text.includes("감사")) translated = "Thank you.";
+                         }
+                    } else if (targetLang === 'ko') {
+                        if (/[a-zA-Z]/.test(text)) {
+                             translated = `[데모] 번역됨: ${text}`;
+                             if (text.toLowerCase().includes("hello")) translated = "안녕하세요.";
+                             if (text.toLowerCase().includes("thank")) translated = "감사합니다.";
+                        }
+                    }
+                    resolve(translated); 
+                }, 300);
             });
         };
 
@@ -142,11 +169,16 @@
             const [remoteMediaType, setRemoteMediaType] = useState('unknown');
             const [subtitles, setSubtitles] = useState([]); 
             const [myLang, setMyLang] = useState('ko');
+            const [targetLang, setTargetLang] = useState('en');
+
             const [showSettings, setShowSettings] = useState(false);
             const [geminiKey, setGeminiKey] = useState('');
             const [isAudioActive, setIsAudioActive] = useState(false);
             const [interimText, setInterimText] = useState(''); 
             
+            // [추가] UI Layout State
+            const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 기본적으로 열림
+
             const localVideoRef = useRef(null);
             const remoteVideoRef = useRef(null);
             const remoteAudioRef = useRef(null);
@@ -156,17 +188,23 @@
             const recognitionRef = useRef(null);
             const geminiKeyRef = useRef('');
             const inputRefs = useRef([]);
-            const chatEndRef = useRef(null);
+            
+            // 스크롤용 Ref 2개 (상대방용, 나용)
+            const partnerChatEndRef = useRef(null);
+            const myChatEndRef = useRef(null);
 
             useEffect(() => {
                 const savedKey = localStorage.getItem('gemini_api_key');
                 if (savedKey) { setGeminiKey(savedKey); geminiKeyRef.current = savedKey; }
             }, []);
 
+            // Auto-scroll logic enhanced (각각 스크롤)
             useEffect(() => {
-                if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }, [subtitles, interimText]);
+                if (partnerChatEndRef.current) partnerChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+                if (myChatEndRef.current) myChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }, [subtitles, interimText, isSidebarOpen]);
 
+            // Audio Level
             useEffect(() => {
                 if (!localStream && !remoteStream) return;
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -185,15 +223,14 @@
                         const source = audioContext.createMediaStreamSource(remoteStream);
                         source.connect(analyser); sources.push(source);
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {}
 
                 let animationId;
                 const checkVolume = () => {
                     analyser.getByteFrequencyData(dataArray);
                     let sum = 0;
                     for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                    const avg = sum / dataArray.length;
-                    setIsAudioActive(avg > 10);
+                    setIsAudioActive(sum / dataArray.length > 10);
                     animationId = requestAnimationFrame(checkVolume);
                 };
                 if (sources.length > 0) checkVolume();
@@ -297,6 +334,7 @@
                 connRef.current = conn;
                 conn.on('data', async (data) => {
                     if (data.type === 'subtitle') {
+                        // 수신: 상대방 언어 -> 내 언어 번역
                         const translated = await translateWithGemini(data.text, myLang);
                         setSubtitles(prev => [...prev, { id: Date.now(), text: data.text, translated, isLocal: false }]);
                         speak(translated, myLang);
@@ -305,6 +343,7 @@
                 conn.on('open', () => { if (mode !== 'call') setStatus("준비 완료"); });
             };
 
+            // --- STT & AI ---
             const setupSpeechRecognition = () => {
                 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
                 if (!SpeechRecognition) return;
@@ -313,7 +352,7 @@
                 const recognition = new SpeechRecognition();
                 recognition.continuous = true;
                 recognition.interimResults = true; 
-                recognition.lang = myLang === 'ko' ? 'ko-KR' : 'en-US';
+                recognition.lang = myLang === 'ko' ? 'ko-KR' : (myLang === 'en' ? 'en-US' : (myLang === 'ja' ? 'ja-JP' : 'zh-CN'));
 
                 recognition.onresult = async (event) => {
                     let final = '';
@@ -326,20 +365,32 @@
                     if (final.trim()) {
                         setInterimText(''); 
                         if (connRef.current?.open) connRef.current.send({ type: 'subtitle', text: final });
-                        const target = myLang === 'ko' ? 'en' : 'ko';
-                        const myTrans = await translateWithGemini(final, target);
+                        
+                        // 발신: 내 언어 -> 상대방 언어 번역
+                        const myTrans = await translateWithGemini(final, targetLang);
                         setSubtitles(prev => [...prev, { id: Date.now(), text: final, translated: myTrans, isLocal: true }]);
                     }
                 };
+
+                recognition.onend = () => {
+                    if (mode === 'call') setTimeout(() => { try { recognition.start(); } catch(e) {} }, 500);
+                };
+
                 try { recognition.start(); recognitionRef.current = recognition; } catch (e) {}
             };
 
-            const translateWithGemini = async (text, targetLang) => {
+            const translateWithGemini = async (text, tLang) => {
                 const apiKey = geminiKeyRef.current;
-                if (!apiKey) return new Promise(r => setTimeout(() => r(`[No Key]: ${text}`), 300));
                 
-                const target = targetLang === 'ko' ? 'Korean' : 'English';
-                const prompt = `Translate to natural ${target}. Output ONLY text.\n"${text}"`;
+                // [수정] 키가 없으면 데모용 번역 반환 (원문X)
+                if (!apiKey) return mockTranslate(text, tLang); 
+                
+                const langMap = { 'ko': 'Korean', 'en': 'English', 'ja': 'Japanese', 'zh': 'Chinese' };
+                const target = langMap[tLang] || 'English';
+                const prompt = `You are a professional interpreter. Translate the following text to ${target}.
+IMPORTANT: Output ONLY the translated text without any explanation or quotes.
+Text: "${text}"`;
+                
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -354,10 +405,13 @@
                 if (!window.speechSynthesis) return;
                 window.speechSynthesis.cancel();
                 const u = new SpeechSynthesisUtterance(text);
-                u.lang = lang === 'ko' ? 'ko-KR' : 'en-US';
+                const voiceLangMap = { 'ko': 'ko-KR', 'en': 'en-US', 'ja': 'ja-JP', 'zh': 'zh-CN' };
+                u.lang = voiceLangMap[lang] || 'en-US';
+                u.rate = 1.1; 
                 window.speechSynthesis.speak(u);
             };
 
+            // UI Helpers
             const handleOtpChange = (index, value) => {
                 if (isNaN(value)) return;
                 const newCode = [...roomCode];
@@ -374,6 +428,9 @@
                 geminiKeyRef.current = key;
                 setShowSettings(false);
             };
+            const swapLanguages = () => {
+                const temp = myLang; setMyLang(targetLang); setTargetLang(temp);
+            };
 
             useEffect(() => {
                 if (localStream && localVideoRef.current) localVideoRef.current.srcObject = localStream;
@@ -384,46 +441,49 @@
                 }
             }, [localStream, remoteStream, mode]);
 
-            // --- Render Components ---
-
+            // --- Render ---
             if (mode === 'home') return (
                 <div className="min-h-screen flex items-center justify-center p-6 relative">
-                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                        <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px]"></div>
-                        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px]"></div>
-                    </div>
-
+                    <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
                     <div className="glass-card max-w-md w-full rounded-[2rem] p-10 text-center animate-enter relative z-10">
                         <button onClick={() => setShowSettings(true)} className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors">
                             <i className="fas fa-cog text-xl"></i>
                         </button>
                         
-                        <div className="mb-10">
-                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-white text-3xl shadow-2xl shadow-blue-500/30 mb-6 transform hover:scale-105 transition-transform duration-300">
-                                <i className="fas fa-globe-americas"></i>
-                            </div>
+                        <div className="mb-8">
+                            <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl mx-auto flex items-center justify-center text-white text-3xl shadow-2xl mb-6"><i className="fas fa-globe-americas"></i></div>
                             <h1 className="text-3xl font-bold tracking-tight mb-2">GlobalMeet</h1>
-                            <p className="text-slate-400 text-sm font-medium">실시간 AI 동시통역 화상회의</p>
+                            <p className="text-slate-400 text-sm">초고속 실시간 통역</p>
+                        </div>
+
+                        <div className="bg-white/5 rounded-2xl p-4 mb-6 border border-white/10">
+                            <p className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">언어 설정</p>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                    <span className="text-xs text-slate-400 block mb-1">나 (Me)</span>
+                                    <select value={myLang} onChange={(e) => setMyLang(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-sm focus:outline-none text-center cursor-pointer">
+                                        {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+                                    </select>
+                                </div>
+                                <button onClick={swapLanguages} className="p-2 text-slate-500 hover:text-white transition mt-4"><i className="fas fa-exchange-alt"></i></button>
+                                <div className="flex-1">
+                                    <span className="text-xs text-slate-400 block mb-1">상대방 (Partner)</span>
+                                    <select value={targetLang} onChange={(e) => setTargetLang(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-sm focus:outline-none text-center cursor-pointer">
+                                        {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+                                    </select>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="space-y-6">
-                            <button onClick={createRoom} className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg shadow-xl hover:bg-slate-100 transition transform hover:scale-[1.02] flex items-center justify-center gap-3">
-                                <i className="fas fa-plus-circle text-blue-600"></i> 회의 시작하기
-                            </button>
-                            
-                            <div className="relative py-2">
-                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                                <div className="relative flex justify-center text-xs uppercase font-semibold tracking-wider text-slate-500"><span className="bg-[#191919] px-2">또는</span></div>
-                            </div>
-
+                            <button onClick={createRoom} className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg shadow-xl hover:bg-slate-100 flex items-center justify-center gap-3"><i className="fas fa-plus-circle text-blue-600"></i> 회의 시작하기</button>
+                            <div className="relative py-2"><div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div><div className="relative flex justify-center text-xs uppercase font-semibold text-slate-500"><span className="bg-[#191919] px-2">또는</span></div></div>
                             <div className="space-y-4">
                                 <p className="text-sm font-medium text-slate-400">참여 코드 입력</p>
                                 <div className="flex justify-between gap-2">
                                     {roomCode.map((d, i) => <input key={i} ref={el => inputRefs.current[i] = el} type="text" maxLength="1" value={d} onChange={e => handleOtpChange(i, e.target.value)} onKeyDown={e => handleKeyDown(i, e)} className="otp-input" />)}
                                 </div>
-                                <button onClick={joinRoom} className="w-full py-3.5 bg-slate-800/80 hover:bg-slate-700 text-white rounded-2xl font-semibold border border-white/10 transition backdrop-blur-sm">
-                                    입장하기 <i className="fas fa-arrow-right ml-2 text-sm opacity-70"></i>
-                                </button>
+                                <button onClick={joinRoom} className="w-full py-3.5 bg-slate-800/80 hover:bg-slate-700 text-white rounded-2xl font-semibold border border-white/10">입장하기</button>
                             </div>
                         </div>
                         
@@ -431,13 +491,10 @@
                             <div className="absolute inset-0 bg-black/90 backdrop-blur-xl rounded-[2rem] z-50 flex flex-col items-center justify-center p-8 animate-enter">
                                 <h3 className="text-xl font-bold mb-6">API 설정</h3>
                                 <form onSubmit={saveSettings} className="w-full space-y-4">
-                                    <div>
-                                        <label className="text-xs font-bold text-slate-500 mb-1.5 block ml-1">Gemini API Key</label>
-                                        <input name="apiKey" defaultValue={geminiKey} placeholder="AIzaSy..." className="w-full p-4 border border-white/10 rounded-2xl bg-white/5 text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition" />
-                                    </div>
+                                    <input name="apiKey" defaultValue={geminiKey} placeholder="Gemini API Key" className="w-full p-4 border border-white/10 rounded-2xl bg-white/5 text-white placeholder-slate-600 focus:border-blue-500 focus:outline-none" />
                                     <div className="flex gap-3 pt-2">
-                                        <button type="button" onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 rounded-xl font-bold text-slate-300 hover:bg-slate-700 transition">취소</button>
-                                        <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-500 transition shadow-lg shadow-blue-500/20">저장</button>
+                                        <button type="button" onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 rounded-xl font-bold text-slate-300">취소</button>
+                                        <button type="submit" className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold">저장</button>
                                     </div>
                                 </form>
                             </div>
@@ -449,23 +506,20 @@
             if (mode === 'host') return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-card max-w-md w-full rounded-[2rem] p-10 text-center animate-enter">
-                        <div className="mb-8">
-                            <span className="inline-block p-3 rounded-full bg-blue-500/10 text-blue-400 mb-4"><i className="fas fa-share-alt text-2xl"></i></span>
-                            <h2 className="text-xl font-bold text-white mb-1">참여 코드</h2>
-                            <p className="text-sm text-slate-400">상대방에게 아래 코드를 공유하세요</p>
+                        <div className="mb-4">
+                            <span className="text-sm text-slate-400 block mb-1">통역 설정</span>
+                            <div className="flex justify-center gap-2 text-lg font-bold">
+                                {LANGUAGES.find(l=>l.code===myLang)?.flag} 
+                                <i className="fas fa-arrow-right text-slate-500 mx-2 text-sm"></i> 
+                                {LANGUAGES.find(l=>l.code===targetLang)?.flag}
+                            </div>
                         </div>
-                        
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 relative group cursor-pointer hover:bg-white/10 transition" onClick={() => {navigator.clipboard.writeText(generatedCode); alert('복사되었습니다');}}>
+                        <h2 className="text-xl font-bold text-white mb-1">참여 코드</h2>
+                        <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 relative cursor-pointer" onClick={() => {navigator.clipboard.writeText(generatedCode); alert('복사되었습니다');}}>
                             <div className="text-5xl font-mono font-bold tracking-widest text-white">{generatedCode.slice(0,3)} {generatedCode.slice(3)}</div>
-                            <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400"><i className="far fa-copy"></i></div>
                         </div>
-
-                        <div className="flex items-center justify-center gap-3 text-sm text-slate-400 mb-8">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            {status}
-                        </div>
-                        
-                        <button onClick={() => window.location.reload()} className="text-slate-500 text-sm font-medium hover:text-red-400 transition">취소하고 나가기</button>
+                        <div className="flex items-center justify-center gap-3 text-sm text-slate-400 mb-8"><div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>{status}</div>
+                        <button onClick={() => window.location.reload()} className="text-slate-500 text-sm font-medium hover:text-red-400">취소</button>
                     </div>
                 </div>
             );
@@ -473,10 +527,7 @@
             if (mode === 'join_connecting') return (
                 <div className="min-h-screen flex items-center justify-center p-4">
                     <div className="glass-card max-w-sm w-full rounded-[2rem] p-10 text-center animate-enter">
-                        <div className="relative w-16 h-16 mx-auto mb-6">
-                            <div className="absolute inset-0 border-4 border-blue-500/30 rounded-full"></div>
-                            <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <h2 className="text-xl font-bold mb-2">연결 중...</h2>
                         <p className="text-slate-400 text-sm">{status}</p>
                     </div>
@@ -486,124 +537,125 @@
             // --- Main Call Screen ---
             const isVideoMode = mediaType === 'video' && remoteMediaType === 'video' && remoteStream;
             
+            // [수정] 2개로 분리된 대화 데이터 필터링
+            const partnerSubtitles = subtitles.filter(s => !s.isLocal);
+            const mySubtitles = subtitles.filter(s => s.isLocal);
+
             return (
-                <div className="relative h-full w-full bg-black overflow-hidden flex flex-col">
+                <div className="relative h-full w-full bg-black overflow-hidden flex flex-col md:flex-row">
                     
-                    {/* Main Content */}
-                    <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-                        {!isVideoMode && remoteStream && (
-                            <audio ref={remoteAudioRef} autoPlay playsInline controls={false} style={{ display: 'none' }} />
-                        )}
-
+                    {/* Main Content (Video/Audio) */}
+                    <div className={`relative flex-1 bg-black flex items-center justify-center overflow-hidden transition-all duration-300 ${isSidebarOpen ? 'md:mr-[400px]' : ''}`}>
+                        
+                        {!isVideoMode && remoteStream && <audio ref={remoteAudioRef} autoPlay playsInline controls={false} style={{ display: 'none' }} />}
+                        
                         {isVideoMode ? (
-                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                            <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-contain" />
                         ) : (
-                            // Audio/Text Mode UI
-                            <div className="w-full h-full max-w-2xl flex flex-col p-6 animate-enter relative z-0 mx-auto">
-                                <div className="text-center py-6">
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-sm text-slate-300 backdrop-blur-md">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                        {status.includes('연결됨') ? '실시간 대화 중' : status}
-                                    </div>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto custom-scroll space-y-6 px-2 pb-32">
-                                    {subtitles.length === 0 && (
-                                        <div className="flex flex-col items-center justify-center h-64 text-slate-600">
-                                            <i className="far fa-comments text-5xl mb-3"></i>
-                                            <p className="text-sm">대화를 시작하면 여기에 표시됩니다</p>
-                                        </div>
-                                    )}
-                                    {subtitles.map(sub => (
-                                        <div key={sub.id} className={`flex flex-col ${sub.isLocal ? 'items-end' : 'items-start'} animate-slide-up`}>
-                                            <div className="flex items-end gap-2 max-w-[85%]">
-                                                {!sub.isLocal && <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-slate-300 font-bold mb-1">상대</div>}
-                                                
-                                                <div className={`px-5 py-3 rounded-2xl shadow-sm ${
-                                                    sub.isLocal 
-                                                    ? 'bubble-me text-white rounded-br-sm' 
-                                                    : 'bubble-other text-white rounded-bl-sm'
-                                                }`}>
-                                                    {sub.isLocal ? (
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="text-[15px] leading-relaxed">{sub.text}</div>
-                                                            <div className="text-[11px] text-blue-100/70 border-t border-white/10 pt-1 mt-1 flex items-center gap-1.5">
-                                                                <span>{sub.translated}</span> <i className="fas fa-check text-[10px]"></i>
-                                                            </div>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="text-[16px] font-semibold text-white leading-relaxed">{sub.translated}</div>
-                                                            <div className="text-[11px] text-slate-400 border-t border-white/10 pt-1 mt-1">
-                                                                {sub.text}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div ref={chatEndRef} />
-                                </div>
+                            <div className="flex flex-col items-center justify-center opacity-50">
+                                <div className="w-32 h-32 bg-slate-800 rounded-full flex items-center justify-center mb-4"><i className="fas fa-user text-5xl text-slate-500"></i></div>
+                                <p className="text-lg font-light text-slate-300">{status}</p>
                             </div>
                         )}
+
+                        {isVideoMode && (
+                            <div className="absolute top-6 right-6 w-48 aspect-[3/4] sm:aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-30 group">
+                                {localStream ? <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" /> : null}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* [수정] 2단 분리된 채팅 사이드바 */}
+                    <div className={`fixed inset-y-0 right-0 w-full md:w-[400px] bg-gray-900/95 backdrop-blur-xl border-l border-white/10 transform transition-transform duration-300 z-50 flex flex-col ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
                         
-                        {/* Video Overlay Subtitles */}
-                        {isVideoMode && subtitles.length > 0 && (
-                            <div className="absolute bottom-44 left-0 right-0 px-6 flex flex-col items-center pointer-events-none z-10 space-y-3">
-                                {subtitles.slice(-2).map(sub => (
-                                    <div key={sub.id} className={`max-w-xl w-full px-6 py-4 rounded-3xl backdrop-blur-xl shadow-2xl border border-white/10 animate-slide-up ${sub.isLocal ? 'bg-black/40 text-right ml-auto mr-0' : 'bg-black/60 text-left mr-auto ml-0'}`}>
-                                        <div className="text-xl font-bold text-white drop-shadow-md leading-relaxed">{sub.translated}</div>
-                                        <div className="text-xs text-slate-300/80 mt-1">{sub.text}</div>
+                        {/* Header */}
+                        <div className="p-4 border-b border-white/10 flex justify-between items-center bg-white/5 shrink-0">
+                            <h3 className="font-bold text-lg flex items-center gap-2">
+                                <i className="far fa-comments text-blue-400"></i> 실시간 대화
+                            </h3>
+                            <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 p-2"><i className="fas fa-times"></i></button>
+                        </div>
+
+                        {/* Top Half: Partner (상대방) */}
+                        <div className="flex-1 flex flex-col border-b border-white/10 overflow-hidden relative bg-slate-800/30">
+                            <div className="split-header flex justify-between items-center">
+                                <span><i className="fas fa-user mr-2 text-yellow-400"></i> 상대방 (Partner)</span>
+                                <span className="text-[10px] text-slate-400">{LANGUAGES.find(l=>l.code===targetLang)?.name}</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-3">
+                                {partnerSubtitles.length === 0 && <div className="text-center text-slate-600 text-sm mt-10">상대방의 말이 여기에 표시됩니다</div>}
+                                {partnerSubtitles.map(sub => (
+                                    <div key={sub.id} className="flex flex-col items-start animate-slide-up">
+                                        <div className="bg-slate-700/80 border border-slate-600 text-white px-4 py-3 rounded-2xl rounded-tl-none shadow-sm max-w-[95%]">
+                                            <div className="text-lg font-bold text-yellow-300 leading-snug">{sub.translated}</div>
+                                            <div className="text-xs text-slate-400 border-t border-slate-600 pt-2 mt-1">{sub.text}</div>
+                                        </div>
                                     </div>
                                 ))}
+                                <div ref={partnerChatEndRef} />
                             </div>
-                        )}
-                    </div>
+                        </div>
 
-                    {/* Bottom Dock (Integrated Input) */}
-                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 w-full max-w-2xl px-4 z-50">
-                        <div className="glass-dock rounded-full p-2 flex items-center gap-2 pl-4 pr-2">
-                            {/* Visualizer Icon */}
-                            <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
-                                {isAudioActive ? (
-                                    <div className="flex gap-1 items-center h-full">
-                                        <div className="visualizer-bar"></div>
-                                        <div className="visualizer-bar"></div>
-                                        <div className="visualizer-bar"></div>
+                        {/* Bottom Half: Me (나) */}
+                        <div className="flex-1 flex flex-col overflow-hidden bg-slate-900/50">
+                            <div className="split-header flex justify-between items-center">
+                                <span><i className="fas fa-user mr-2 text-blue-400"></i> 나 (Me)</span>
+                                <span className="text-[10px] text-slate-400">{LANGUAGES.find(l=>l.code===myLang)?.name}</span>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scroll p-4 space-y-3">
+                                {mySubtitles.length === 0 && <div className="text-center text-slate-600 text-sm mt-10">내가 한 말이 여기에 표시됩니다</div>}
+                                {mySubtitles.map(sub => (
+                                    <div key={sub.id} className="flex flex-col items-end animate-slide-up">
+                                        <div className="bubble-me text-white px-4 py-3 rounded-2xl rounded-tr-none shadow-sm max-w-[95%] text-right">
+                                            <div className="text-base font-medium">{sub.text}</div>
+                                            <div className="text-xs text-blue-200 border-t border-blue-500/50 pt-1 mt-1 flex items-center justify-end gap-1.5">
+                                                <span>{sub.translated}</span> <i className="fas fa-check text-[10px]"></i>
+                                            </div>
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                                        <i className={`fas ${mediaType === 'text' ? 'fa-keyboard' : 'fa-microphone'} text-slate-400 text-sm`}></i>
+                                ))}
+                                <div ref={myChatEndRef} />
+                            </div>
+
+                            {/* Bottom Input Area (Inside Me section) */}
+                            <div className="p-3 bg-white/5 border-t border-white/10 shrink-0">
+                                <div className="flex flex-col gap-2">
+                                    <div className="h-10 flex items-center justify-center text-center px-4 bg-black/40 rounded-xl border border-white/5 relative overflow-hidden">
+                                        {interimText ? (
+                                            <span className="text-blue-300 text-sm animate-pulse truncate w-full">{interimText}</span>
+                                        ) : (
+                                            <div className="flex items-center gap-2 text-slate-500 text-xs">
+                                                <div className={`w-2 h-2 rounded-full ${isAudioActive ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></div>
+                                                <span>듣고 있습니다...</span>
+                                            </div>
+                                        )}
+                                        {isAudioActive && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-0.5 h-4 items-end opacity-50">
+                                                <div className="w-1 bg-blue-500 visualizer-bar"></div>
+                                                <div className="w-1 bg-blue-500 visualizer-bar" style={{animationDelay:'-0.2s'}}></div>
+                                                <div className="w-1 bg-blue-500 visualizer-bar" style={{animationDelay:'-0.4s'}}></div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                    <div className="flex justify-between items-center px-1">
+                                        <button onClick={() => window.location.reload()} className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center transition shadow-lg">
+                                            <i className="fas fa-phone-slash text-xs"></i>
+                                        </button>
+                                        <span className="text-[10px] text-slate-600">GlobalMeet AI</span>
+                                    </div>
+                                </div>
                             </div>
-
-                            {/* Live Text Input Display */}
-                            <div className="flex-1 h-10 flex items-center overflow-hidden relative">
-                                {interimText ? (
-                                    <span className="text-white text-sm font-medium animate-pulse truncate">{interimText}</span>
-                                ) : (
-                                    <span className="text-slate-500 text-sm">
-                                        {mediaType === 'text' ? '음성 인식이 꺼져있습니다.' : '듣고 있습니다...'}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="h-8 w-px bg-white/10 mx-1"></div>
-                            
-                            <button onClick={() => window.location.reload()} className="w-10 h-10 rounded-full bg-red-500/90 hover:bg-red-600 text-white flex items-center justify-center transition shadow-lg shrink-0">
-                                <i className="fas fa-phone text-sm transform rotate-[135deg]"></i>
-                            </button>
                         </div>
                     </div>
 
-                    {/* PIP View */}
-                    {isVideoMode && (
-                        <div className="absolute top-6 right-6 w-48 aspect-[3/4] sm:aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 z-40">
-                            {localStream ? <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" /> : null}
-                        </div>
+                    {!isSidebarOpen && (
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="absolute bottom-8 right-8 w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-2xl flex items-center justify-center z-50 transition-transform hover:scale-110"
+                        >
+                            <i className="fas fa-columns text-xl"></i>
+                            {subtitles.length > 0 && <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-black"></span>}
+                        </button>
                     )}
                 </div>
             );
